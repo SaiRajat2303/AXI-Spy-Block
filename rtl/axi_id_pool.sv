@@ -1,7 +1,6 @@
-
 module axi_id_pool #(
-    parameter integer ID_WIDTH = 4;
-    parameter integer ID_COUNT = 1 << ID_WIDTH;
+    parameter integer ID_WIDTH = 4,
+    parameter integer ID_COUNT = 1 << ID_WIDTH
 )
 (
     input clk,
@@ -24,8 +23,8 @@ module axi_id_pool #(
 
 reg [ID_WIDTH-1:0] id_queue [ID_COUNT-1:0]; 
 // 16 entry queue for wrapping
-reg [ID_WIDTH-1:0] alloc_ptr ;
-reg [ID_WIDTH-1:0] dealloc_ptr;
+reg [ID_WIDTH:0] alloc_ptr ;
+reg [ID_WIDTH:0] dealloc_ptr;
 // Not using a wrap bit since we have a count variable
 
 reg [ID_WIDTH:0] count; // Maintains count of free IDs
@@ -55,9 +54,8 @@ always@(posedge clk or posedge reset) begin
     end
 end
 
-always_comb begin
-    alloc_valid = count > 0;
-    alloc_id = id_queue[alloc_ptr];
-end
+
+assign  alloc_valid = ~((alloc_ptr[ID_WIDTH-1:0] == dealloc_ptr[ID_WIDTH-1:0]) && (alloc_ptr[ID_WIDTH] != dealloc_ptr[ID_WIDTH]));
+assign  alloc_id = id_queue[alloc_ptr[ID_WIDTH-1:0]];
 
 endmodule
