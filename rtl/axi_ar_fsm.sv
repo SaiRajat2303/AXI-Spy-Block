@@ -100,6 +100,7 @@ module axi_ar_fsm #(
                 if (arready)
                     next_state = IDLE;
             end
+            
             default: begin
                 next_state = IDLE;
             end
@@ -112,5 +113,3 @@ module axi_ar_fsm #(
   assign arid    = arid_reg;
 
 endmodule
-
-
