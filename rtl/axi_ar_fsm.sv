@@ -1,5 +1,3 @@
-// FSM State Typedefs
-
 module axi_ar_fsm #(
     parameter ADDR_WIDTH = 16,
     parameter ID_WIDTH = 4,
