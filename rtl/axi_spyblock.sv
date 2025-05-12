@@ -1,3 +1,4 @@
+// Part of TT Mentorship Program : Mijat_Rajat
 module axi_spyblock #(
     parameter ADDR_WIDTH = 32,
     parameter DATA_WIDTH = 32,
@@ -13,7 +14,7 @@ module axi_spyblock #(
     // AXI AW channel signals
     input AWVALID,
     input AWREADY,
-    input [ADDR_WIDTH-1:0] AW_ADDR,
+    input [ADDR_WIDTH-1:0] AWADDR,
 
     // AXI W channel signals
     input WVALID,
