@@ -1,4 +1,4 @@
-// Part of TT Mentorship Program - Mijat_Rajat
+
 `timescale 1ns/1ps
 
 module tb_axi_spyblock;
@@ -7,7 +7,7 @@ module tb_axi_spyblock;
   parameter ADDR_WIDTH = 32;
   parameter DATA_WIDTH = 64;
   parameter LEN_WIDTH  = 8;
-  parameter FIFO_DEPTH = 16;
+  parameter FIFO_DEPTH = 4;
 
   logic clk;
   logic rst_n;
