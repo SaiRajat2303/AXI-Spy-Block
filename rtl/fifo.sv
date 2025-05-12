@@ -1,3 +1,4 @@
+
 module fifo #(
   parameter DATA_WIDTH = 64,
   parameter FIFO_DEPTH = 32
@@ -56,54 +57,19 @@ module fifo #(
   wire empty;
   wire full;
   
-  // SRAM signals
-  // These should be wires since they shall be driven as ports to SRAM cewll
-  wire chip_en ;
-  wire wr_en;
-  wire rd_en;
-  wire [PTR_W-1:0] addr;
-  wire [DATA_WIDTH-1:0] wr_fifo_data;
-  
   // Using reg since they are present withing always block
  
   reg [DATA_WIDTH-1:0] rd_fifo_data;
 
   // Note You can drive registers as input ports to an instantiated module , but you cannot drive them in the child module 
     /*
-    When you connect a reg to a module input, it’s totally fine because the port itself is just a wire by default, and you're driving that input from the outside.
-    What you can’t do is try to assign to that input inside the submodule if it’s not declared as an output
-    TLDR : Can you connect a reg to an input port? | ✅ Yes | | Can the submodule assign to that input? | ❌ No (unless it's an inout or output) |
+    When you connect a reg to a module input, it?s totally fine because the port itself is just a wire by default, and you're driving that input from the outside.
+    What you can?t do is try to assign to that input inside the submodule if it?s not declared as an output
+    TLDR : Can you connect a reg to an input port? | ? Yes | | Can the submodule assign to that input? | ? No (unless it's an inout or output) |
     */
   
   //In old verilog , the equivalent of always_comb is always@(*) -> basic point
 
-
-  assign chip_en = push_i | pop_i;
-  assign wr_en = push_i;
-  assign rd_en = pop_i & ~push_i;
-  assign addr = wr_en?wr_ptr_q:rd_ptr_q;
-  assign wr_fifo_data_sram = push_data_i;
-
-  
-  sram_cell #(.SRAM_DEPTH(FIFO_DEPTH),
-              .DATA_WIDTH(DATA_WIDTH),
-              .RAM_INDEX_WIDTH(PTR_W)
-             ) 
-  			sram_dut_inst (
-              .chip_en_i(chip_en),
-              .wr_en_i(wr_en),
-              .addr_i(addr),
-              .wr_data_i(wr_fifo_data),
-              .wr_mask_en_i(1'b0),
-              //.wr_mask(), -> not driving it
-              .rd_en_i(rd_en),
-              .rd_data_o(rd_fifo_data),
-              .clk(clk),
-              .reset(reset)
-            );
-  
-  // Problem with SRAM cell as memory is cant do both Push and Pop at the same time
-  
   // Flops for FIFO pointers
   
   always_ff @(posedge clk or posedge reset) begin
