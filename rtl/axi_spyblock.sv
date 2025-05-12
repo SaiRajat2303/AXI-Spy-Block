@@ -39,7 +39,7 @@ module axi_spyblock #(
 // FIFO signals for R-channel spy block
 reg [DATA_WIDTH-1:0] rdat;
 reg r_push;
-wire r_pop; // assert -> when fifo is full and the next negedge is triggered
+reg r_pop; // assert -> when fifo is full and the next negedge is triggered
 wire [DATA_WIDTH-1:0] r_pop_data;
 wire r_full;
 wire r_empty;
@@ -50,7 +50,6 @@ wire r_trig_neg;
 assign r_trig = (RREADY == 1'b1)?(RREADY ^ RVALID):(1'b1);
 assign r_trig_neg = r_trig_d1 & ~r_trig; // negative edge detector
 
-assign rpop = r_full & r_trig_neg; // Only Pop when a fifo becomes full and a new txn needs to be added to fifo
 
 fifo #(
     .DATA_WIDTH(DATA_WIDTH),
@@ -60,9 +59,9 @@ fifo #(
     .clk(clk),
     .reset(reset),
     .push_i(r_push),
-    .push_data_i(rdata),
+    .push_data_i(rdat),
     .pop_i(r_pop),
-    .pop_data_o(r_pop_data)
+    .pop_data_o(r_pop_data),
     .full_o(r_full),
     .empty_o(r_empty)
 );
@@ -73,12 +72,16 @@ always@(posedge clk) begin
     // R spyblock handling
     r_trig_d1 <= r_trig; // 1 cycle delayed version of r_trig
     if(r_trig_neg) begin
-        rdata <= RDATA;
+        rdat <= RDATA;
         r_push <= 1'b1;
+        if(r_full) begin
+            r_pop <= 1'b1;
+        end
     end
     else begin
-        rdata <= 0;
+        rdat <= 0;
         r_push <= 1'b0;
+        r_pop <= 1'b0;
     end
 end
 // Logic to detect the first time the handshake occurs ->
@@ -94,3 +97,4 @@ now use a negedge detector for detecting when the handshake occurs for the first
 */
 
 endmodule
+
