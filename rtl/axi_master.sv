@@ -1,131 +1,136 @@
-// Master Module for Generating AXI Traffic 
-// Inputs driven by the Testbench
-
 module axi_master_gen #(
-    parameter ADDR_WIDTH = 32,
-    parameter DATA_WIDTH = 32,
-    parameter ID_WIDTH   = 4
+    parameter ID_WIDTH   = 4,
+    parameter ADDR_WIDTH = 32,
+    parameter DATA_WIDTH = 64,
+    parameter LEN_WIDTH  = 8
 )(
-    input  logic              ACLK,
-    input  logic              ARESETN,
+    input  logic                  clk,
+    input  logic                  rst_n,
 
-    // Write address channel
-    output logic [ID_WIDTH-1:0]    AWID,
-    output logic [ADDR_WIDTH-1:0]  AWADDR,
-    output logic [7:0]             AWLEN,
-    output logic [2:0]             AWSIZE,
-    output logic [1:0]             AWBURST,
-    output logic                   AWVALID,
-    input  logic                   AWREADY,
+    // Write Address Channel
+    output logic [ID_WIDTH-1:0]   awid,
+    output logic [ADDR_WIDTH-1:0] awaddr,
+    output logic [7:0]            awlen,
+    output logic [2:0]            awsize,
+    output logic [1:0]            awburst,
+    output logic                  awvalid,
+    input  logic                  awready,
 
-    // Write data channel
-    output logic [DATA_WIDTH-1:0]  WDATA,
-    output logic                   WVALID,
-    output logic                   WLAST,
-    output logic [(DATA_WIDTH/8)-1:0] WSTRB,
-    input  logic                   WREADY,
+    // Write Data Channel
+    output logic [DATA_WIDTH-1:0] wdata,
+    output logic [(DATA_WIDTH/8)-1:0] wstrb,
+    output logic                  wlast,
+    output logic                  wvalid,
+    input  logic                  wready,
 
-    // Write response channel
-    input  logic [1:0]             BRESP,
-    input  logic                   BVALID,
-    output logic                   BREADY,
+    // Write Response Channel
+    input  logic [ID_WIDTH-1:0]   bid,
+    input  logic [1:0]            bresp,
+    input  logic                  bvalid,
+    output logic                  bready,
 
-    // Read address channel
-    output logic [ID_WIDTH-1:0]    ARID,
-    output logic [ADDR_WIDTH-1:0]  ARADDR,
-    output logic [7:0]             ARLEN,
-    output logic [2:0]             ARSIZE,
-    output logic [1:0]             ARBURST,
-    output logic                   ARVALID,
-    input  logic                   ARREADY,
+    // Read Address Channel
+    output logic [ID_WIDTH-1:0]   arid,
+    output logic [ADDR_WIDTH-1:0] araddr,
+    output logic [7:0]            arlen,
+    output logic [2:0]            arsize,
+    output logic [1:0]            arburst,
+    output logic                  arvalid,
+    input  logic                  arready,
 
-    // Read data channel
-    input  logic [DATA_WIDTH-1:0]  RDATA,
-    input  logic                   RVALID,
-    input  logic                   RLAST,
-    output logic                   RREADY
+    // Read Data Channel
+    input  logic [ID_WIDTH-1:0]   rid,
+    input  logic [DATA_WIDTH-1:0] rdata,
+    input  logic [1:0]            rresp,
+    input  logic                  rlast,
+    input  logic                  rvalid,
+    output logic                  rready
 );
 
-    typedef enum logic [1:0] {
-        IDLE, SEND_WRITE, SEND_READ
-    } state_t;
+    typedef enum logic [1:0] {IDLE, SEND_WRITE, SEND_READ} state_t;
+    state_t state, next_state;
 
-    state_t state;
-    int burst_count;
-    logic [ADDR_WIDTH-1:0] base_addr;
+    logic [3:0] count;
+    logic       wr_phase;
 
-    always_ff @(posedge ACLK or negedge ARESETN) begin
-        if (!ARESETN) begin
-            state       <= IDLE;
-            AWVALID     <= 0;
-            WVALID      <= 0;
-            ARVALID     <= 0;
-            BREADY      <= 0;
-            RREADY      <= 0;
-            burst_count <= 0;
-            base_addr   <= 32'h0000_0000;
-        end else begin
-            case (state)
-                IDLE: begin
-                    // Send a write transaction
-                    AWID    <= 0;
-                    AWADDR  <= base_addr;
-                    AWLEN   <= 4;  // 5-beat burst
-                    AWSIZE  <= 3'b010;  // 4 bytes
-                    AWBURST <= 2'b01;   // INCR
-                    AWVALID <= 1;
-                    state   <= SEND_WRITE;
-                end
+    logic [31:0] rand_addr;
+    logic [63:0] rand_data;
+    logic [3:0]  rand_id;
 
-                SEND_WRITE: begin
-                    if (AWREADY && AWVALID) begin
-                        AWVALID <= 0;
-                        burst_count <= 0;
-                        WVALID <= 1;
-                        WSTRB <= '1;
-                        WDATA <= 32'hA5A5A5A5;
-                    end
-                    if (WREADY && WVALID) begin
-                        burst_count <= burst_count + 1;
-                        if (burst_count == 4) begin
-                            WLAST <= 1;
-                        end else begin
-                            WLAST <= 0;
-                        end
-                        if (burst_count == 5) begin
-                            WVALID <= 0;
-                            WLAST <= 0;
-                            BREADY <= 1;
-                        end
-                    end
-                    if (BVALID && BREADY) begin
-                        BREADY <= 0;
-                        // Start a read transaction
-                        ARID    <= 0;
-                        ARADDR  <= base_addr;
-                        ARLEN   <= 4;
-                        ARSIZE  <= 3'b010;
-                        ARBURST <= 2'b01;
-                        ARVALID <= 1;
-                        state   <= SEND_READ;
-                    end
-                end
+    // Random LFSRs
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            rand_addr <= 32'h1;
+            rand_data <= 64'hCAFEBEEFDEADBABE;
+            rand_id   <= 4'h1;
+        end else begin
+            rand_addr <= {rand_addr[30:0], rand_addr[31] ^ rand_addr[21]};
+            rand_data <= {rand_data[62:0], rand_data[63] ^ rand_data[50]};
+            rand_id   <= {rand_id[2:0], rand_id[3] ^ rand_id[1]};
+        end
+    end
 
-                SEND_READ: begin
-                    if (ARVALID && ARREADY) begin
-                        ARVALID <= 0;
-                        RREADY <= 1;
-                    end
-                    if (RVALID && RREADY) begin
-                        if (RLAST) begin
-                            RREADY <= 0;
-                            base_addr <= base_addr + 32'h0000_0020;
-                            state <= IDLE;
-                        end
-                    end
-                end
-            endcase
-        end
-    end
+    // FSM and state tracking
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            state     <= IDLE;
+            count     <= 0;
+            wr_phase  <= 1;
+        end else begin
+            state <= next_state;
+
+            if (state == SEND_WRITE && wvalid && wready)
+                count <= count + 1;
+            else if (state == SEND_READ && arvalid && arready)
+                count <= count + 1;
+            else if (state == IDLE)
+                count <= 0;
+
+            if (state == IDLE)
+                wr_phase <= ~wr_phase; // Flip between read and write
+        end
+    end
+
+    always_comb begin
+        next_state = state;
+        case (state)
+            IDLE: begin
+                next_state = wr_phase ? SEND_WRITE : SEND_READ;
+            end
+            SEND_WRITE: begin
+                if (wvalid && wready && wlast)
+                    next_state = IDLE;
+            end
+            SEND_READ: begin
+                if (arvalid && arready)
+                    next_state = IDLE;
+            end
+        endcase
+    end
+
+    // Write Channel
+    assign awid     = rand_id;
+    assign awaddr   = rand_addr;
+    assign awlen    = 4;
+    assign awsize   = 3'b011; // 8 bytes
+    assign awburst  = 2'b01;  // INCR
+    assign awvalid  = (state == SEND_WRITE);
+
+    assign wdata    = rand_data;
+    assign wstrb    = '1;
+    assign wlast    = (count == 4);
+    assign wvalid   = (state == SEND_WRITE);
+
+    assign bready   = 1'b1;
+
+    // Read Channel
+    assign arid     = rand_id;
+    assign araddr   = rand_addr;
+    assign arlen    = 4;
+    assign arsize   = 3'b011;
+    assign arburst  = 2'b01;
+    assign arvalid  = (state == SEND_READ);
+
+    assign rready   = 1'b1;
 
 endmodule
