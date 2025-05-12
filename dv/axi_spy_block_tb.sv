@@ -1,3 +1,4 @@
+
 `timescale 1ns/1ps
 
 module tb_axi_spyblock;
@@ -107,20 +108,24 @@ module tb_axi_spyblock;
     .FIFO_DEPTH(FIFO_DEPTH)
   ) dut (
     // AR Channel signals
-    .ARVALID(ARVALID),
-    .ARREADY(ARREADY),
-    .ARADDR(ARADDR),
+    .ARVALID(arvalid),
+    .ARREADY(arready),
+    .ARADDR(araddr),
+    // AW Channel signals
+    .AWVALID(awvalid),
+    .AWREADY(awready),
+    .AWADDR(awaddr),
     // R Channel signals
-    .RVALID(RVALID),
-    .RREADY(RREADY),
-    .RDATA(RDATA),
+    .RVALID(rvalid),
+    .RREADY(rready),
+    .RDATA(rdata),
     // W Channel signals
-    .WVALID(WVALID),
-    .WREADY(WREADY),
-    .WDATA(WDATA),
+    .WVALID(wvalid),
+    .WREADY(wready),
+    .WDATA(wdata),
     // Generic signals
-    .clk(ACLK),
-    .reset(~ARESETN),
+    .clk(clk),
+    .reset(~rst_n),
     // Spyblock output signals
     .r_spy_full(r_spy_full),
     .ar_spy_full(ar_spy_full),
