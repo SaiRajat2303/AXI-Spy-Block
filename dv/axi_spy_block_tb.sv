@@ -1,4 +1,3 @@
-
 `timescale 1ns/1ps
 
 module tb_axi_spyblock;
@@ -107,33 +106,29 @@ module tb_axi_spyblock;
     .DATA_WIDTH(DATA_WIDTH),
     .FIFO_DEPTH(FIFO_DEPTH)
   ) dut (
-    // AR Channel signals
     .ARVALID(arvalid),
     .ARREADY(arready),
+    .ARID(arid),
     .ARADDR(araddr),
-    // AW Channel signals
     .AWVALID(awvalid),
     .AWREADY(awready),
+    .AWID(awid),
     .AWADDR(awaddr),
-    // R Channel signals
     .RVALID(rvalid),
     .RREADY(rready),
+    .RID(rid),
     .RDATA(rdata),
-    // W Channel signals
     .WVALID(wvalid),
     .WREADY(wready),
+    .WID(4'b0),
     .WDATA(wdata),
-    // Generic signals
     .clk(clk),
     .reset(~rst_n),
-    // Spyblock output signals
     .r_spy_full(r_spy_full),
     .ar_spy_full(ar_spy_full),
     .w_spy_full(w_spy_full),
     .aw_spy_full(aw_spy_full)
   );
-
-  // Simple AXI Slave: responds immediately
 
   assign awready = 1;
   assign wready  = 1;
@@ -186,12 +181,43 @@ module tb_axi_spyblock;
     end
   end
 
-  // Simulation end
+  // Back-to-back followed by non back-to-back read transactions
+  initial begin
+    arvalid = 0;
+    arid    = 0;
+    araddr  = 32'h0000_0000;
+    arlen   = 4;
+    arsize  = 3'b011;
+    arburst = 2'b01;
+    #30;
+    // 5 back-to-back
+    repeat (5) begin
+      wait (arready);
+      arvalid = 1;
+      @(posedge clk);
+      araddr += 64;
+      arid++;
+    end
+    arvalid = 0;
+    #40;
+    // 3 non back-to-back
+    repeat (3) begin
+      arvalid = 1;
+      wait (arready);
+      @(posedge clk);
+      araddr += 64;
+      arid++;
+      arvalid = 0;
+      #30;
+    end
+  end
+
+  assign rready = 1;
+
   initial begin
     #1000;
     $display("Simulation finished.");
     $finish;
   end
-  
 
 endmodule
